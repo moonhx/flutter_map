@@ -69,7 +69,7 @@ abstract class MapGestureMixin extends State<FlutterMap>
       //recaculate the point for _focalStartGlobal
       // final focalOffset = details.focalPoint - _mapOffset;
       // LatLng myfocalGlobal = _offsetToCrs(focalOffset);
-      options.onDragUpdate(_focalStartGlobal);
+      options.onDragUpdate(_offsetToCrs(details.focalPoint));
       return;
     }
     setState(() {

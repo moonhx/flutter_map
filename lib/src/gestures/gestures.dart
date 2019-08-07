@@ -30,6 +30,7 @@ abstract class MapGestureMixin extends State<FlutterMap>
   MapState get mapState;
   MapState get map => mapState;
   MapOptions get options;
+  bool dragElement = false;
 
   @override
   void initState() {
@@ -53,9 +54,24 @@ abstract class MapGestureMixin extends State<FlutterMap>
 
       _controller.stop();
     });
+    // 添加开始拖动事件
+    if (options.onDragStart != null) {
+      dragElement = options.onDragStart(_focalStartGlobal);
+    } else {
+      dragElement = false;
+    }
   }
 
   void handleScaleUpdate(ScaleUpdateDetails details) {
+    // 正在拖动事件
+    if (dragElement) {
+      // options.onDragUpdate(_focalStartGlobal);
+      //recaculate the point for _focalStartGlobal
+      // final focalOffset = details.focalPoint - _mapOffset;
+      // LatLng myfocalGlobal = _offsetToCrs(focalOffset);
+      options.onDragUpdate(_focalStartGlobal);
+      return;
+    }
     setState(() {
       final focalOffset = _offsetToPoint(details.localFocalPoint);
       final newZoom = _getZoomForScale(_mapZoomStart, details.scale);
@@ -68,11 +84,14 @@ abstract class MapGestureMixin extends State<FlutterMap>
   }
 
   void handleScaleEnd(ScaleEndDetails details) {
+    if (dragElement) {
+      options.onDragEnd();
+      return;
+    }
     var magnitude = details.velocity.pixelsPerSecond.distance;
     if (magnitude < _kMinFlingVelocity) {
       return;
     }
-
     var direction = details.velocity.pixelsPerSecond / magnitude;
     var distance = (Offset.zero & context.size).shortestSide;
 

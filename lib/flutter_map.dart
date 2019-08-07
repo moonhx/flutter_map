@@ -73,6 +73,9 @@ abstract class MapController {
 }
 
 typedef void TapCallback(LatLng point);
+typedef bool DragStart(LatLng point);
+typedef DragUpdate(LatLng point);
+typedef bool DragEnd();
 typedef void LongPressCallback(LatLng point);
 typedef void PositionCallback(
     MapPosition position, bool hasGesture, bool isUserGesture);
@@ -86,6 +89,9 @@ class MapOptions {
   final bool debug;
   final bool interactive;
   final TapCallback onTap;
+  final DragStart onDragStart;
+  final DragUpdate onDragUpdate;
+  final DragEnd onDragEnd;
   final LongPressCallback onLongPress;
   final PositionCallback onPositionChanged;
   final List<MapPlugin> plugins;
@@ -103,6 +109,9 @@ class MapOptions {
     this.debug = false,
     this.interactive = true,
     this.onTap,
+    this.onDragStart,
+    this.onDragUpdate,
+    this.onDragEnd,
     this.onLongPress,
     this.onPositionChanged,
     this.plugins = const [],

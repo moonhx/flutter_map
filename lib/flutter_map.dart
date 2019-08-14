@@ -72,10 +72,10 @@ abstract class MapController {
   factory MapController() => MapControllerImpl();
 }
 
-typedef void TapCallback(LatLng point);
-typedef bool DragStart(LatLng point);
-typedef DragUpdate(LatLng point);
-typedef bool DragEnd();
+typedef void TapCallback(LatLng point, Offset focalOffset);
+typedef bool DragStart(LatLng point, Offset focalOffset);
+typedef void DragUpdate(LatLng point, Offset focalOffset);
+typedef bool DragEnd(Offset focalOffset);
 typedef void LongPressCallback(LatLng point);
 typedef void PositionCallback(
     MapPosition position, bool hasGesture, bool isUserGesture);

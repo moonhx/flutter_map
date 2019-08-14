@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong/latlong.dart';
+import 'dart:math' as math;
 
 void main()=>runApp(MyApp());
 
@@ -10,16 +11,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  
-  List<LatLng> _points;
-
   @override
   void initState() {
-    _points = <LatLng>[
-      LatLng(51.5, -0.09),
-      LatLng(53.3498, -6.2603),
-      LatLng(48.8566, 2.3522),
-    ];
     super.initState();
   }
   @override
@@ -39,16 +32,45 @@ class MyMap extends StatefulWidget {
 class _MyMapState extends State<MyMap> {
 
   List<LatLng> _points;
+  List<CircleMarker> _circles;
+  LatLng tempLat;
+  List<CircleMarker> _guideCircles;
+
+  Crs crs;
+  MapController _mapController;
+  double _extentRadius;
+
 
   @override
   void initState() {
-    _points = <LatLng>[
-      LatLng(51.5, -0.09),
-      LatLng(53.3498, -6.2603),
-      LatLng(48.8566, 2.3522),
-    ];
+    _points = [];
+    _circles = [];
+    _guideCircles = [];
+    _extentRadius = 30.0;
+    crs = const Epsg3857();
+    _mapController = MapController();
     super.initState();
   }
+
+  // 获取屏幕间两点的位置
+  double getOffsetDistance(Offset o1, Offset o2){
+    return math.sqrt(math.pow(o1.dx - o2.dx, 2) + math.pow(o1.dy - o2.dy, 2));
+  }
+
+  Offset _crsToOffset(LatLng point){
+    // Get the widget's offset
+    var renderObject = context.findRenderObject() as RenderBox;
+    var width = renderObject.size.width;
+    var height = renderObject.size.height;
+
+    var localPoint = crs.latLngToPoint(point, _mapController.zoom);
+    var mapCenter = crs.latLngToPoint(_mapController.center, _mapController.zoom);
+    var localPointCenterDistance = mapCenter - localPoint;
+
+    return Offset( width / 2 - localPointCenterDistance.x,  height / 2 - localPointCenterDistance.y);
+    
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -56,41 +78,102 @@ class _MyMapState extends State<MyMap> {
           children: <Widget>[
             Flexible(
               child: FlutterMap(
+                mapController: _mapController,
                 options: MapOptions(
-                  onTap: (lat){
+                  crs: crs,
+                  onTap: (lat, focalOffset){
+                    // print(1231);
+                    // print(lat);
+                    // var point = crs.latLngToPoint(lat, _mapController.zoom);
+                    tempLat = lat;
                     setState(() {
                       _points.add(lat); 
+                      _circles.add(
+                        CircleMarker(
+                          point: lat,
+                          borderStrokeWidth: 1,
+                          borderColor: Colors.red,
+                          color: Colors.transparent,
+                          radius: 4.0,
+                        )
+                      );
+                      _guideCircles = [
+                        CircleMarker(
+                          point: lat,
+                          borderStrokeWidth: 3,
+                          borderColor: Colors.red,
+                          color: Colors.transparent,
+                          radius: _extentRadius,
+                        )
+                      ];
                     });
                   },
-                  onDragStart: (lat){
-                    return true;
+                  onDragStart: (lat, focalOffset){
+                    if(tempLat == null){
+                      return false;
+                    }
+                    var offsetCrs = _crsToOffset(tempLat);
+                    if(getOffsetDistance(focalOffset,offsetCrs)<=_extentRadius+20){
+                      return true;
+                    }else{
+                      return false;
+                    }
                   },
-                  onDragUpdate: (lat){
-                    setState(() {
-                    _points.add(lat); 
-                    });
+                  onDragUpdate: (lat, focalOffset){
+                    var offsetCrs = _crsToOffset(tempLat);
+                    if(getOffsetDistance(offsetCrs,focalOffset) > 20){
+                      setState(() {
+                        tempLat = lat;
+                        _points.add(lat); 
+                        _circles.add(
+                          CircleMarker(
+                            point: lat,
+                            borderStrokeWidth: 1,
+                            borderColor: Colors.red,
+                            color: Colors.transparent,
+                            radius: 4.0,
+                          )
+                        );
+                        _guideCircles = [
+                          CircleMarker(
+                            point: lat,
+                            borderStrokeWidth: 3,
+                            borderColor: Colors.red,
+                            color: Colors.transparent,
+                            radius: 30.0,
+                          )
+                        ];
+                      });
+                    }
+                      
                   },
-                  onDragEnd: (){
+                  onDragEnd: (focalOffset){
                     return true;
                   },
                   center: LatLng(51.5, -0.09),
-                  zoom: 5.0,
-                  maxZoom: 5.0,
+                  zoom: 14.0,
+                  maxZoom: 19.0,
                   minZoom: 3.0,
                 ),
                 layers: [
                   TileLayerOptions(
-                      urlTemplate:
-                          'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      subdomains: ['a', 'b', 'c']),
+                    urlTemplate:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    subdomains: ['a', 'b', 'c']
+                  ),
                   PolylineLayerOptions(
-                  polylines: [
-                    Polyline(
+                    polylines: [
+                      Polyline(
                         points: _points,
                         strokeWidth: 4.0,
-                        color: Colors.purple),
-                  ],
-                )   
+                        color: Colors.purple
+                      ),
+                    ],
+                  ),
+                  // 点或者线上面的效果点
+                  CircleLayerOptions(circles: _circles),   
+                  // 开始的指引点（引导点）
+                  CircleLayerOptions(circles: _guideCircles),
+
                 ],
               )
             )

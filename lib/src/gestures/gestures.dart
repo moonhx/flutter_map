@@ -30,6 +30,7 @@ abstract class MapGestureMixin extends State<FlutterMap>
   MapState get mapState;
   MapState get map => mapState;
   MapOptions get options;
+
   bool dragElement = false;
 
   @override
@@ -56,20 +57,21 @@ abstract class MapGestureMixin extends State<FlutterMap>
     });
     // 添加开始拖动事件
     if (options.onDragStart != null) {
-      dragElement = options.onDragStart(_focalStartGlobal);
+      dragElement = options.onDragStart(_focalStartGlobal, details.localFocalPoint);
     } else {
       dragElement = false;
     }
   }
 
   void handleScaleUpdate(ScaleUpdateDetails details) {
-    // 正在拖动事件
-    if (dragElement) {
+    // 正在拖动事件  
+    if (dragElement && details.scale==1.0) {
       // options.onDragUpdate(_focalStartGlobal);
       //recaculate the point for _focalStartGlobal
       // final focalOffset = details.focalPoint - _mapOffset;
       // LatLng myfocalGlobal = _offsetToCrs(focalOffset);
-      options.onDragUpdate(_offsetToCrs(details.focalPoint));
+      // 添加用于更新地图的，第一个参数是经纬度坐标，第二个参数是屏幕坐标位置
+      options.onDragUpdate(_offsetToCrs(details.focalPoint), details.focalPoint);
       return;
     }
     setState(() {
@@ -85,9 +87,11 @@ abstract class MapGestureMixin extends State<FlutterMap>
 
   void handleScaleEnd(ScaleEndDetails details) {
     if (dragElement) {
-      options.onDragEnd();
+      // options.onDragEnd();
       return;
     }
+    // LatLng point, Offset focalOffset
+    options.onDragEnd(_flingOffset);
     var magnitude = details.velocity.pixelsPerSecond.distance;
     if (magnitude < _kMinFlingVelocity) {
       return;
@@ -115,8 +119,8 @@ abstract class MapGestureMixin extends State<FlutterMap>
       return;
     }
     final latlng = _offsetToCrs(position.relative);
-    // emit the event
-    options.onTap(latlng);
+    // emit the event  添加返回参数，屏幕坐标
+    options.onTap(latlng, position.relative);
   }
 
   void handleLongPress(TapPosition position) {
